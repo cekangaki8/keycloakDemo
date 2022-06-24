@@ -8,10 +8,16 @@ package com.example.keycloakfrontend.controller;
 
 import com.example.keycloakfrontend.model.MailItem;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import javax.annotation.security.RolesAllowed;
 import javax.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.util.List;
@@ -19,6 +25,8 @@ import java.util.List;
 @Controller
 public class WebController {
 
+    @Autowired
+    private OAuth2AuthorizedClientService authorizedClientService;
 
     @GetMapping(path = "/")
     public String index() {
@@ -31,22 +39,19 @@ public class WebController {
         return "redirect:/";
     }
 
+    @RolesAllowed("ROLE_ADMIN")
     @GetMapping(path = "/mailitems")
-    public String mailitems(Principal principal, Model model) {
+    public String mailitems(Model model, @AuthenticationPrincipal OAuth2User principal, OAuth2AuthenticationToken authentication) {
         List<MailItem> mailItems = addMailitems();
         model.addAttribute("mailitems", mailItems);
-        model.addAttribute("username", principal.getName());
+        model.addAttribute("username", authentication.getPrincipal().getAttribute("preferred_username"));
         return "mailitems";
     }
 
-   /* @GetMapping(path = "/customersusingspringsecurity")
-    public String customersusingspringsecurity(Principal principal, Model model) {
-        addCustomers();
-        Iterable<Customer> customers = customerDAO.findAll();
-        model.addAttribute("customers", customers);
-        model.addAttribute("username", principal.getName());
-        return "customers";
-    }*/
+    private OAuth2AuthorizedClient getAuthorizedClient(OAuth2AuthenticationToken authentication) {
+        return this.authorizedClientService.loadAuthorizedClient(
+                authentication.getAuthorizedClientRegistrationId(), authentication.getName());
+    }
 
     // add customers for demonstration
     public List<MailItem> addMailitems() {
